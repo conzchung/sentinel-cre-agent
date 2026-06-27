@@ -1,0 +1,50 @@
+# FastAPI and server
+fastapi
+uvicorn
+python-multipart
+
+# Async HTTP
+aiohttp
+
+# Environment
+python-dotenv
+
+# LangChain / LangGraph
+langchain
+langchain-core
+langchain-openai
+langchain-community
+langchain-tavily
+langgraph
+langgraph-sdk
+langgraph-checkpoint
+langgraph-checkpoint-cosmosdb
+
+# Vector store
+qdrant-client
+
+# Azure services
+azure-storage-blob
+azure-identity
+azure-cosmos
+
+# Utilities
+pytz
+pydantic
+typing-extensions
+requests
+filetype
+bcrypt
+pyyaml
+pandas
+matplotlib
+plotly
+tabulate
+numpy
+
+# PDF reports (generate_report tool) — needs native libs at runtime
+# (pango / cairo / gdk-pixbuf / glib), installed in Dockerfile.fastapi.
+weasyprint>=60
+# Markdown → HTML for the PDF report builder (report_builder.py). Previously
+# pulled in only transitively, so the slim runtime image lacked it.
+markdown>=3.8

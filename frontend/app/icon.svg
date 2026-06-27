@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!-- Sentinel brand mark: serif "S" on a gold rounded square. Mirrors the
+       in-app .brand-mark (gold #c8a96a square, dark #1a1206 glyph). -->
+  <rect width="32" height="32" rx="9" fill="#c8a96a" />
+  <text x="16" y="17" fill="#1a1206" font-family="Georgia, 'Times New Roman', serif"
+        font-size="22" font-weight="600" text-anchor="middle" dominant-baseline="central">S</text>
+</svg>

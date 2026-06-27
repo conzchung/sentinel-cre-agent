@@ -1,0 +1,34 @@
+# azd project definition for Sentinel.
+#
+#   azd up            provision infra (infra/main.bicep) + build/push/deploy both services
+#   azd provision     infra only
+#   azd deploy        rebuild + redeploy a service's image
+#   azd down          tear everything down
+#
+# Images are built remotely in ACR (docker.remoteBuild), so a local Docker
+# daemon is NOT required. Each service maps to its Container App by the
+# azd-service-name tag set in main.bicep.
+
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+name: sentinel
+metadata:
+  template: sentinel-cre-agent
+
+services:
+  api:
+    project: .
+    language: docker
+    host: containerapp
+    docker:
+      path: ./Dockerfile.fastapi
+      context: .
+      remoteBuild: true
+
+  web:
+    project: ./frontend
+    language: docker
+    host: containerapp
+    docker:
+      path: ./Dockerfile
+      context: .
+      remoteBuild: true

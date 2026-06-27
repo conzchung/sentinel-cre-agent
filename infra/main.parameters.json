@@ -1,0 +1,28 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environmentName": { "value": "${AZURE_ENV_NAME}" },
+    "location": { "value": "${AZURE_LOCATION}" },
+
+    "openaiApiKey": { "value": "${OPENAI_API_KEY}" },
+    "azureOpenaiEndpoint": { "value": "${AZURE_OPENAI_ENDPOINT}" },
+    "deploymentNameGpt54": { "value": "${DEPLOYMENT_NAME_GPT54}" },
+    "deploymentNameGpt54m": { "value": "${DEPLOYMENT_NAME_GPT54M}" },
+    "imageDeploymentName": { "value": "${IMAGE_DEPLOYMENT_NAME}" },
+    "apiKey": { "value": "${API_KEY}" },
+    "cosmosUrl": { "value": "${COSMOS_URL}" },
+    "cosmosKey": { "value": "${COSMOS_KEY}" },
+    "agentCosmosUrl": { "value": "${AGENT_COSMOS_URL}" },
+    "agentCosmosKey": { "value": "${AGENT_COSMOS_KEY}" },
+    "blobConnectionString": { "value": "${BLOB_CONNECTION_STRING}" },
+    "qdrantUrl": { "value": "${QDRANT_URL}" },
+    "qdrantApiKey": { "value": "${QDRANT_API_KEY}" },
+    "jinaApiKey": { "value": "${JINA_API_KEY}" },
+    "tavilyApiKey": { "value": "${TAVILY_API_KEY}" },
+
+    "cookieSecret": { "value": "${COOKIE_SECRET}" },
+    "authUsername": { "value": "${AUTH_USERNAME}" },
+    "authPassword": { "value": "${AUTH_PASSWORD}" }
+  }
+}

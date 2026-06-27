@@ -1,0 +1,50 @@
+# Sentinel — full stack: FastAPI agent backend + Next.js frontend.
+#
+#   docker compose up --build
+#
+# Secrets are read from the host environment (e.g. an .env file in this dir).
+# Required: API_KEY, COOKIE_SECRET, plus whatever the agent needs (Azure OpenAI,
+# Cosmos, Tavily, Jina, Qdrant — see env.template.json / requirements-fastapi).
+
+services:
+  fastapi:
+    build:
+      context: .
+      dockerfile: Dockerfile.fastapi
+    image: sentinel-fastapi
+    env_file:
+      - .env
+    environment:
+      # API_SERVER lets render_chart emit absolute static URLs if ever needed.
+      API_SERVER: http://localhost:8000
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/')"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: sentinel-frontend
+    environment:
+      # Reach the backend over the compose network, not localhost.
+      FASTAPI_URL: http://fastapi:8000
+      # Required — no insecure defaults. API_KEY must match the backend's;
+      # COOKIE_SECRET signs the session cookie. Set both in the host .env.
+      API_KEY: ${API_KEY:?set API_KEY in your .env}
+      COOKIE_SECRET: ${COOKIE_SECRET:?set COOKIE_SECRET in your .env}
+      # Single demo account (defaults to demo/demo inside the app if unset).
+      AUTH_USERNAME: ${AUTH_USERNAME:-demo}
+      AUTH_PASSWORD: ${AUTH_PASSWORD:-demo}
+    ports:
+      - "3000:3000"
+    depends_on:
+      fastapi:
+        condition: service_healthy
+    restart: unless-stopped

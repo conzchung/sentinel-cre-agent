@@ -1,0 +1,13 @@
+.env
+.env.*
+env.template.json
+.git
+.gitignore
+.DS_Store
+__pycache__
+*.pyc
+*.pyo
+.vscode
+.idea
+*.md
+*.log

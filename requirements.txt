@@ -1,0 +1,6 @@
+# Supplementary dependencies for the PDF report-generation path.
+# The full backend dependency set lives in requirements-fastapi.txt; this file
+# records the extra packages the PDF report feature needs so it is reproducible.
+weasyprint>=60
+matplotlib>=3.7
+markdown>=3.5

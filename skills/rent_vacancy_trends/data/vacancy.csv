@@ -1,0 +1,25 @@
+quarter,submarket,vacancy_rate_pct
+2024Q1,City,9.8
+2024Q1,West End,7.2
+2024Q1,Canary Wharf,16.5
+2024Q1,Midtown,8.4
+2024Q2,City,9.5
+2024Q2,West End,6.9
+2024Q2,Canary Wharf,16.0
+2024Q2,Midtown,8.1
+2024Q3,City,9.1
+2024Q3,West End,6.5
+2024Q3,Canary Wharf,15.2
+2024Q3,Midtown,7.8
+2024Q4,City,8.7
+2024Q4,West End,6.0
+2024Q4,Canary Wharf,14.8
+2024Q4,Midtown,7.5
+2025Q1,City,8.3
+2025Q1,West End,5.6
+2025Q1,Canary Wharf,14.0
+2025Q1,Midtown,7.2
+2025Q2,City,8.0
+2025Q2,West End,5.3
+2025Q2,Canary Wharf,13.5
+2025Q2,Midtown,7.0

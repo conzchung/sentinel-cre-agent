@@ -1,0 +1,47 @@
+# Environment & secrets
+.env
+.env.*
+env.template.json
+*-env.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Claude Code
+CLAUDE.md
+.claude/
+.superpowers/
+.remember/
+
+# Internal AI-assisted planning artifacts (specs/plans) — not user-facing docs
+docs/superpowers/
+
+# PDFs (local briefs/exports) — never publish
+*.pdf
+
+# Docker
+*.log
+
+# Generated chart images
+static/charts/*.png
+
+frontend/node_modules/
+frontend/.next/
+frontend/.env.local
+frontend/mockups/
+
+# azd environment (holds provisioned secrets/outputs) — never commit
+.azure/

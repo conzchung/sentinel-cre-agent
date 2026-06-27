@@ -1,0 +1,63 @@
+# Build Stage
+FROM python:3.12-slim AS builder
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=Etc/UTC
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libssl-dev \
+    zlib1g-dev \
+    libffi-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /code
+
+RUN pip install --upgrade pip setuptools wheel
+
+COPY requirements-fastapi.txt .
+RUN pip install --no-cache-dir -r requirements-fastapi.txt
+
+# Runtime Stage
+FROM python:3.12-slim
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=Etc/UTC
+
+WORKDIR /code
+
+COPY --from=builder /usr/local /usr/local
+
+# Native libraries WeasyPrint needs at runtime for the generate_report PDF tool
+# (pango / cairo / gdk-pixbuf / glib). Without these the lazy `from weasyprint
+# import HTML` raises at call time.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libcairo2 \
+    libgdk-pixbuf-2.0-0 \
+    libffi8 \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV GIT_PYTHON_REFRESH=quiet
+
+# Non-root user
+RUN useradd -m -r appuser
+USER appuser
+
+# Application code plus the runtime assets the agent reads:
+#   skills/ — skill folders scanned by agent/skills_registry.py
+#   data/   — RAG corpus + illustrative CSV seed data
+#   static/ — mounted at /static by main.py (StaticFiles fails if absent)
+COPY --chown=appuser:appuser main.py .
+COPY --chown=appuser:appuser agent/ agent/
+COPY --chown=appuser:appuser skills/ skills/
+COPY --chown=appuser:appuser data/ data/
+COPY --chown=appuser:appuser static/ static/
+
+EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/')" || exit 1
+
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port 8000 --workers 2"]
