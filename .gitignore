@@ -45,3 +45,7 @@ frontend/mockups/
 
 # azd environment (holds provisioned secrets/outputs) — never commit
 .azure/
+
+# Local scratch / reference — not part of the app
+COMPONENT_DESIGN.md
+image_generation.py

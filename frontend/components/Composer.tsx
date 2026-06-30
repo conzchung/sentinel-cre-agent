@@ -46,9 +46,13 @@ export default function Composer({
             }
           }}
         />
-        <button className="btn send" onClick={submit} disabled={disabled} aria-label="Send message">
+        <button
+          className="btn send"
+          onClick={submit}
+          disabled={disabled}
+          aria-label={disabled ? 'Sending message' : 'Send message'}
+        >
           <SendIcon size={16} />
-          {disabled ? 'Sending…' : 'Send'}
         </button>
       </div>
     </div>
