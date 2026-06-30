@@ -45,6 +45,8 @@ html, body {
   font-size: 15px;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  overflow-x: hidden;   /* fallback for iOS < 16 */
+  overflow-x: clip;     /* real fix: not a horizontal scroll container */
 }
 
 button { font-family: inherit; cursor: pointer; }
@@ -388,6 +390,7 @@ a:hover { text-decoration: underline; }
   color: var(--text-strong);
   white-space: pre-wrap;
   word-wrap: break-word;
+  overflow-wrap: anywhere;
 }
 
 /* assistant turn */
@@ -512,14 +515,17 @@ a:hover { text-decoration: underline; }
   border: 1px solid var(--border);
   border-radius: 5px;
   padding: 1px 5px;
+  overflow-wrap: anywhere;
 }
 .answer pre {
   background: var(--panel-2);
   border: 1px solid var(--border);
   border-radius: 9px;
   padding: 13px 15px;
-  overflow-x: auto;
   margin: 0 0 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 .answer pre code { background: none; border: none; padding: 0; font-size: 0.85em; }
 

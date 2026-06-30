@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter, Fraunces, IBM_Plex_Mono } from 'next/font/google';
 import './globals.css';
 
@@ -26,6 +26,11 @@ const mono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   title: 'Sentinel — London Office Market',
   description: 'AI monitoring of the London office commercial real estate market',
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
