@@ -28,8 +28,11 @@ RUN groupadd --system --gid 1001 nodejs \
   && useradd --system --uid 1001 --gid nodejs nextjs
 
 # The standalone server, plus the static assets and public dir it serves.
+# NOTE: output:'standalone' does NOT bundle public/ — it must be copied
+# explicitly, or files like /sentinel-login.png 404 at runtime.
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
 USER nextjs
 
