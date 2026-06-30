@@ -31,7 +31,7 @@ export default function Composer({
       <div className="row">
         <textarea
           ref={taRef}
-          placeholder="Ask about London office rents, vacancy, supply, macro, or news…"
+          placeholder="Ask Sentinel"
           value={value}
           disabled={disabled}
           rows={1}
