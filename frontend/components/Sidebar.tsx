@@ -3,14 +3,14 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Conversation } from '@/lib/types';
-import { PlusIcon, TrashIcon, LogoutIcon, CheckIcon, CloseIcon, SidebarIcon } from './Icons';
+import { PlusIcon, TrashIcon, LogoutIcon, CheckIcon, CloseIcon } from './Icons';
 
 export default function Sidebar({
   user,
   conversations,
   activeId,
-  collapsed,
-  onToggle,
+  open,
+  onClose,
   onNewChat,
   onResume,
   onDelete,
@@ -18,8 +18,8 @@ export default function Sidebar({
   user: string;
   conversations: Conversation[];
   activeId: string;
-  collapsed: boolean;
-  onToggle: () => void;
+  open: boolean;
+  onClose: () => void;
   onNewChat: () => void;
   onResume: (id: string) => void;
   onDelete: (id: string) => void;
@@ -28,59 +28,36 @@ export default function Sidebar({
   const [confirmId, setConfirmId] = useState<string | null>(null);
 
   async function logout() {
+    onClose();
     await fetch('/api/logout', { method: 'POST' });
     router.replace('/login');
     router.refresh();
   }
 
-  // Collapsed rail: icon-only affordances, no conversation list.
-  if (collapsed) {
-    return (
-      <aside className="sidebar is-collapsed">
-        <div className="side-top">
-          <button
-            className="rail-btn brand-mark-btn"
-            title="Expand sidebar (⌘\)"
-            aria-label="Expand sidebar"
-            onClick={onToggle}
-          >
-            <span className="brand-mark">S</span>
-          </button>
-          <button
-            className="rail-btn"
-            title="New chat"
-            aria-label="New chat"
-            onClick={onNewChat}
-          >
-            <PlusIcon size={17} />
-          </button>
-        </div>
-        <div className="side-list" />
-        <div className="side-foot">
-          <button className="rail-btn" title="Log out" aria-label="Log out" onClick={logout}>
-            <LogoutIcon size={16} />
-          </button>
-        </div>
-      </aside>
-    );
+  // Each nav action also dismisses the mobile drawer (no-op visually on desktop,
+  // where the sidebar is always in the grid).
+  function handleNewChat() {
+    onNewChat();
+    onClose();
+  }
+  function handleResume(id: string) {
+    onResume(id);
+    onClose();
+  }
+  function handleDelete(id: string) {
+    onDelete(id);
+    setConfirmId(null);
+    onClose();
   }
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${open ? 'open' : ''}`}>
       <div className="side-top">
         <div className="brand">
           <span className="brand-mark">S</span>
           <span className="brand-name">SENTINEL</span>
-          <button
-            className="side-collapse"
-            title="Collapse sidebar (⌘\)"
-            aria-label="Collapse sidebar"
-            onClick={onToggle}
-          >
-            <SidebarIcon size={16} />
-          </button>
         </div>
-        <button className="btn-ghost newchat" onClick={onNewChat}>
+        <button className="btn-ghost newchat" onClick={handleNewChat}>
           <PlusIcon size={16} />
           New chat
         </button>
@@ -105,10 +82,7 @@ export default function Sidebar({
                     className="confirm-yes"
                     title="Confirm delete"
                     aria-label="Confirm delete"
-                    onClick={() => {
-                      onDelete(c.thread_id);
-                      setConfirmId(null);
-                    }}
+                    onClick={() => handleDelete(c.thread_id)}
                   >
                     <CheckIcon size={14} />
                   </button>
@@ -126,7 +100,7 @@ export default function Sidebar({
                   <button
                     className="title"
                     title={c.convo_title || 'Untitled'}
-                    onClick={() => onResume(c.thread_id)}
+                    onClick={() => handleResume(c.thread_id)}
                   >
                     {c.convo_title || 'Untitled conversation'}
                   </button>

@@ -119,14 +119,8 @@ export const CheckIcon = ({ size = 13, className }: IconProps) =>
 export const CloseIcon = ({ size = 13, className }: IconProps) =>
   svg(size, className, <path d="M18 6L6 18M6 6l12 12" />);
 
-// Panel-with-left-column glyph — the conventional "toggle sidebar" affordance.
-export const SidebarIcon = ({ size = 16, className }: IconProps) =>
-  svg(size, className, (
-    <>
-      <rect x="3" y="4" width="18" height="16" rx="2" />
-      <path d="M9 4v16" />
-    </>
-  ));
+export const MenuIcon = ({ size = 18, className }: IconProps) =>
+  svg(size, className, <path d="M3 6h18M3 12h18M3 18h18" />);
 
 const TOOL_ICON: Record<ToolIconKey, (p: IconProps) => React.ReactElement> = {
   skill: SkillIcon,
