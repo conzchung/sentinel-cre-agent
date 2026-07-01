@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Conversation } from '@/lib/types';
-import { PlusIcon, TrashIcon, LogoutIcon, CheckIcon, CloseIcon } from './Icons';
+import { TrashIcon, LogoutIcon, CheckIcon, CloseIcon } from './Icons';
 
 export default function Sidebar({
   user,
@@ -58,8 +58,7 @@ export default function Sidebar({
           <span className="brand-name">SENTINEL</span>
         </div>
         <button className="btn-ghost newchat" onClick={handleNewChat}>
-          <PlusIcon size={16} />
-          New chat
+          New Chat
         </button>
       </div>
 
