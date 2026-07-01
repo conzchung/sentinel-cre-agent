@@ -29,6 +29,18 @@ export function parseActionBlock(raw: string): Action[] {
   return actions;
 }
 
+// Restore persisted actions (an already-parsed JSON array of {tool, objective})
+// into Action[]. Missing / non-array → []; malformed entries filtered; missing
+// objective → ''. The array twin of parseActionBlock (which parses the live
+// <ACTION> text stream) — kept alongside it so the two stay in sync.
+export function normalizeActions(raw: unknown): Action[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((x): x is Record<string, unknown> => !!x && typeof x === 'object')
+    .map((x) => ({ tool: String(x.tool ?? ''), objective: String(x.objective ?? '') }))
+    .filter((a) => a.tool);
+}
+
 // If the tail of `s` is a proper prefix of `close`, hold it back so a half-formed
 // closing tag is never rendered as response text.
 function holdBackPartialClose(s: string, close: string): string {

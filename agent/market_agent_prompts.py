@@ -22,6 +22,9 @@ Use PROGRESSIVE DISCLOSURE:
 {skills_catalog}
 
 ## Tools
+Every tool takes a leading `objective`: a SHORT label (a few words, e.g. "Latest
+City prime rents" or "Chart rent vs vacancy") shown to the user as the action
+caption. Keep it a concise chip caption, not a sentence.
 - `list_skills` — re-list skills if unsure.
 - `read_skill` — load a skill's full instructions before doing its work.
 - `read_skill_file` — inspect a raw data/reference file in a skill.

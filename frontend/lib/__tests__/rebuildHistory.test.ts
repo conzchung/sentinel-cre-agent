@@ -25,4 +25,33 @@ describe('rebuildHistory', () => {
     expect(rebuildHistory([])).toEqual([]);
     expect(rebuildHistory(null as unknown as unknown[])).toEqual([]);
   });
+
+  it('restores persisted plan and actions on an assistant turn', () => {
+    const dialog = [
+      {
+        role: 'assistant',
+        content: 'Rents are firm.',
+        plan: [{ content: 'Pull figures', status: 'completed', remarks: null }],
+        actions: [{ tool: 'query_dataset', objective: 'City rents' }],
+      },
+    ];
+    const turns = rebuildHistory(dialog);
+    expect(turns[0].plan).toEqual([
+      { content: 'Pull figures', status: 'completed', remarks: null },
+    ]);
+    expect(turns[0].actions).toEqual([{ tool: 'query_dataset', objective: 'City rents' }]);
+  });
+
+  it('restores old messages without plan/actions as empty arrays', () => {
+    const turns = rebuildHistory([{ role: 'assistant', content: 'answer' }]);
+    expect(turns[0].plan).toEqual([]);
+    expect(turns[0].actions).toEqual([]);
+  });
+
+  it('coerces a malformed stored status to pending without throwing', () => {
+    const dialog = [
+      { role: 'assistant', content: 'x', plan: [{ content: 'y', status: 'bogus' }] },
+    ];
+    expect(rebuildHistory(dialog)[0].plan[0].status).toBe('pending');
+  });
 });

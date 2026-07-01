@@ -1,7 +1,8 @@
 """Shared tools for the Sentinel London office market agent.
 
-Every tool takes a leading ``objective`` parameter: the agent's stated reason
-for the call, used for transparent action logging in the stream.
+Every tool takes a leading ``objective`` parameter: a short, human-readable
+label for the call (a few words, shown to the user in the action log). Keep it
+concise — a chip caption, not a sentence.
 """
 
 from __future__ import annotations
@@ -42,7 +43,7 @@ async def list_skills(objective: str) -> str:
     request.
 
     Args:
-        objective: Your stated reason for listing skills (one sentence).
+        objective: Short label for this call (a few words), shown to the user.
     """
     return sr.build_catalog(sr.discover_skills())
 
@@ -53,7 +54,7 @@ async def read_skill(objective: str, skill_id: str) -> str:
     after you have picked a skill from `list_skills`, before doing the work.
 
     Args:
-        objective: Your stated reason for loading this skill.
+        objective: Short label for this call (a few words), shown to the user.
         skill_id: The skill id, e.g. "rent_vacancy_trends".
     """
     return sr.read_skill_body(skill_id)
@@ -65,7 +66,7 @@ async def read_skill_file(objective: str, skill_id: str, filename: str) -> str:
     to inspect a dataset directly; for filtered analysis prefer `query_dataset`.
 
     Args:
-        objective: Your stated reason for reading the file.
+        objective: Short label for this call (a few words), shown to the user.
         skill_id: The skill id that owns the file.
         filename: The bare filename, e.g. "prime_rents.csv".
     """
@@ -84,7 +85,7 @@ async def query_dataset(
     pass to `render_chart`.
 
     Args:
-        objective: Your stated reason for the query.
+        objective: Short label for this call (a few words), shown to the user.
         skill_id: The skill that owns the dataset, e.g. "rent_vacancy_trends".
         dataset: The CSV filename, e.g. "prime_rents.csv".
         filters: Optional column -> value (or list of values) filters, e.g.
@@ -160,7 +161,7 @@ async def render_chart(objective: str, chart_spec: Dict[str, Any]) -> str:
     do NOT write a markdown image link. Just refer to the chart in your prose.
 
     Args:
-        objective: Your stated reason for the chart.
+        objective: Short label for this call (a few words), shown to the user.
         chart_spec: {
             "type": "line" | "bar" | "grouped_bar",
             "title": str, "x_label": str, "y_label": str,
@@ -211,7 +212,7 @@ async def web_search(objective: str, user_query: str) -> dict:
     citations.
 
     Args:
-        objective: Your stated reason for searching (mention it is a web search).
+        objective: Short label for this call (a few words), shown to the user.
         user_query: A concise, specific search query.
     """
     return await _tavily_search(user_query, search_context_size="low")
@@ -226,7 +227,7 @@ async def knowledge_search(objective: str, query: str, top_k: int = 4) -> dict:
     same {content, citations} shape as web_search — cite results with [n].
 
     Args:
-        objective: Your stated reason for the search (one sentence).
+        objective: Short label for this call (a few words), shown to the user.
         query: A concise natural-language query describing what you need.
         top_k: How many notes to retrieve (default 4).
     """
@@ -257,7 +258,7 @@ async def create_plan(objective: str, steps: List[Dict[str, Any]]) -> str:
     several steps; for a single direct question, just answer.
 
     Args:
-        objective: Your stated reason for planning.
+        objective: Short label for this call (a few words), shown to the user.
         steps: A list of {"content": str, "status":
             "pending"|"in_progress"|"completed"|"deleted", "remarks": str|None}.
     """
@@ -276,8 +277,8 @@ async def update_plan(objective: str, steps: List[Dict[str, Any]]) -> str:
     not just the changed step.
 
     Args:
-        objective: Your stated reason for the update (e.g. "figures done, starting
-            analysis").
+        objective: Short label for this call (a few words, e.g. "figures done,
+            starting analysis"), shown to the user.
         steps: The complete list of {"content": str, "status":
             "pending"|"in_progress"|"completed"|"deleted", "remarks": str|None},
             same length and order as the original plan, with statuses advanced.
@@ -318,7 +319,7 @@ async def generate_report(
     the whole report back into chat.
 
     Args:
-        objective: Your stated reason for generating the report (one sentence).
+        objective: Short label for this call (a few words), shown to the user.
         title: The report title, e.g. "London Office Market Briefing".
         sections: Ordered list of sections. Each is a dict:
             {"heading": str,
@@ -416,7 +417,7 @@ async def run_analysis(
     you may chart them with `render_chart` using a chart_spec built from them.
 
     Args:
-        objective: Your stated reason for the analysis (one sentence).
+        objective: Short label for this call (a few words), shown to the user.
         code: Python that assigns `result`. Example:
             rents = datasets["prime_rents"]
             vac = datasets["vacancy"]

@@ -129,3 +129,47 @@ def test_latest_plan_steps_none_without_plan_tool():
         ],
     )
     assert ma._latest_plan_steps(ai) is None
+
+
+def test_extract_actions_returns_non_plan_tools_in_order():
+    # Mirrors what _format_action renders as chips: {tool, objective} for every
+    # non-plan tool call, in call order. Plan tools are excluded (the plan card
+    # already visualizes them) — so the restored chips match the live ones.
+    ai = AIMessage(
+        content="",
+        tool_calls=[
+            {"name": "update_plan", "args": {"objective": "starting",
+                "steps": [{"content": "s1", "status": "in_progress"}]},
+             "id": "1", "type": "tool_call"},
+            {"name": "query_dataset", "args": {"objective": "City rents"},
+             "id": "2", "type": "tool_call"},
+            {"name": "render_chart", "args": {"objective": "rent trend"},
+             "id": "3", "type": "tool_call"},
+        ],
+    )
+    assert ma._extract_actions(ai) == [
+        {"tool": "query_dataset", "objective": "City rents"},
+        {"tool": "render_chart", "objective": "rent trend"},
+    ]
+
+
+def test_extract_actions_empty_when_only_plan_tool():
+    ai = AIMessage(
+        content="",
+        tool_calls=[
+            {"name": "create_plan", "args": {"objective": "briefing",
+                "steps": [{"content": "s1", "status": "pending"}]},
+             "id": "1", "type": "tool_call"},
+        ],
+    )
+    assert ma._extract_actions(ai) == []
+
+
+def test_extract_actions_defaults_missing_objective_to_empty_string():
+    ai = AIMessage(
+        content="",
+        tool_calls=[
+            {"name": "list_skills", "args": {}, "id": "1", "type": "tool_call"},
+        ],
+    )
+    assert ma._extract_actions(ai) == [{"tool": "list_skills", "objective": ""}]

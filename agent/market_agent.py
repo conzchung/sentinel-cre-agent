@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import logging
 import uuid
@@ -62,9 +63,14 @@ def _make_checkpointer():
         return MemorySaver()
 
 
-async def _persist_message(thread_id, role, content, user_id, figures=None):
+async def _persist_message(thread_id, role, content, user_id, figures=None, plan=None, actions=None):
     """Best-effort upsert of one dialog turn into sentinelConvo. Never raises —
-    persistence must not block or break the response stream."""
+    persistence must not block or break the response stream.
+
+    plan/actions are written ONLY when non-empty (assistant turns that ran a
+    plan/tools). User turns and plain text answers get neither key, so the
+    stored shape stays backward-compatible and old messages restore as empty
+    arrays on the frontend."""
     message = {
         "role": role,
         "content": content,
@@ -72,6 +78,10 @@ async def _persist_message(thread_id, role, content, user_id, figures=None):
     }
     if figures is not None:
         message["figures"] = figures
+    if plan:
+        message["plan"] = plan
+    if actions:
+        message["actions"] = actions
     try:
         await _upsert_chat_document(
             sentinel_convo_container,
@@ -242,6 +252,21 @@ def _latest_plan_steps(ai_message: AIMessage) -> Optional[list]:
     return steps
 
 
+def _extract_actions(ai_message: AIMessage) -> list[dict]:
+    """Return [{tool, objective}, ...] for every NON-plan tool call in this
+    message, in call order — the same set _format_action renders as <ACTION>
+    chips. Plan tools (create_plan/update_plan) are excluded; they drive the
+    <PLAN> card, not chips. Used to persist a turn's action chips so a resumed
+    conversation shows the same chips it did live."""
+    actions: list[dict] = []
+    for tc in ai_message.tool_calls:
+        name = tc["name"]
+        if name in ("create_plan", "update_plan"):
+            continue
+        actions.append({"tool": name, "objective": tc.get("args", {}).get("objective", "")})
+    return actions
+
+
 def _all_completed(steps: list) -> list:
     """Mark every non-deleted step completed — the deterministic terminal state
     once the turn finishes, so the plan never freezes mid-progress even if the
@@ -289,74 +314,103 @@ async def run_agent(
     response_parts: list[str] = []
     figure_jsons: list[str] = []
     latest_plan_steps: Optional[list] = None  # last plan snapshot seen this turn
+    turn_actions: list[dict] = []  # {tool, objective} chips, accumulated in order
+    persisted = False
 
-    async for mode, chunk in graph.astream(
-        {"messages": [HumanMessage(content=message)], "suggested_questions": None},
-        config,
-        stream_mode=["messages", "values", "custom"],
-    ):
-        if mode == "messages":
-            msg_chunk, meta = chunk
-            # Stream ONLY the assistant node's answer tokens (no tool calls).
-            # Without the node guard, the suggest_questions node's LLM tokens
-            # would leak into the open <RESPONSE> block.
-            if (
-                meta.get("langgraph_node") == "assistant"
-                and isinstance(msg_chunk, AIMessage)
-                and not msg_chunk.tool_calls
-            ):
-                text = msg_chunk.content
-                if text:
-                    if not response_open:
-                        response_open = True
-                        yield {"thread_id": thread_id, "ai_response": "<RESPONSE>\n"}
-                    yield {"thread_id": thread_id, "ai_response": text}
-                    response_parts.append(text)
-        elif mode == "custom":
-            # Chart payloads pushed by render_chart via get_stream_writer. render_chart
-            # runs DURING tool execution — i.e. before the assistant streams its answer
-            # tokens — so emitting the <CHART> here would strand the chart above (or
-            # mid-) an empty answer. Buffer it instead and flush after </RESPONSE>.
-            if isinstance(chunk, dict) and "chart" in chunk:
-                figure_json = chunk["chart"].get("figure_json", "")
-                if figure_json:
-                    figure_jsons.append(figure_json)
-        elif mode == "values":
-            messages = chunk.get("messages") or []
-            last = messages[-1] if messages else None
-            # Emit ACTION/PLAN once per assistant message that has tool calls.
-            if isinstance(last, AIMessage) and last.tool_calls and last.id not in streamed_action_ids:
-                streamed_action_ids.add(last.id)
-                plan_steps = _latest_plan_steps(last)
-                if plan_steps is not None:
-                    latest_plan_steps = plan_steps
-                yield {"thread_id": thread_id, "ai_response": _format_action(last)}
-            # Emit suggestions when present.
-            sq = chunk.get("suggested_questions")
-            if sq and "suggestions" not in streamed_action_ids:
-                streamed_action_ids.add("suggestions")
-                if response_open:
-                    yield {"thread_id": thread_id, "ai_response": "\n</RESPONSE>\n\n"}
-                    response_open = False
-                yield {"thread_id": thread_id, "ai_response": f"<SUGGESTION>\n{sq}\n</SUGGESTION>\n\n"}
+    async def _persist_assistant_turn():
+        """Persist the assistant turn exactly once, from either the normal path
+        or the cancellation finally. plan = the terminal all-completed snapshot
+        the user saw; actions = the chips in call order — so a resumed
+        conversation renders byte-identically to the live one."""
+        nonlocal persisted
+        if persisted:
+            return
+        persisted = True  # set BEFORE the await so the finally can't double-write
+        turn_plan = _all_completed(latest_plan_steps) if latest_plan_steps else []
+        await _persist_message(
+            thread_id, "assistant", "".join(response_parts), user_id,
+            figures=figure_jsons, plan=turn_plan, actions=turn_actions,
+        )
 
-    if response_open:
-        yield {"thread_id": thread_id, "ai_response": "\n</RESPONSE>\n\n"}
+    try:
+        async for mode, chunk in graph.astream(
+            {"messages": [HumanMessage(content=message)], "suggested_questions": None},
+            config,
+            stream_mode=["messages", "values", "custom"],
+        ):
+            if mode == "messages":
+                msg_chunk, meta = chunk
+                # Stream ONLY the assistant node's answer tokens (no tool calls).
+                # Without the node guard, the suggest_questions node's LLM tokens
+                # would leak into the open <RESPONSE> block.
+                if (
+                    meta.get("langgraph_node") == "assistant"
+                    and isinstance(msg_chunk, AIMessage)
+                    and not msg_chunk.tool_calls
+                ):
+                    text = msg_chunk.content
+                    if text:
+                        if not response_open:
+                            response_open = True
+                            yield {"thread_id": thread_id, "ai_response": "<RESPONSE>\n"}
+                        yield {"thread_id": thread_id, "ai_response": text}
+                        response_parts.append(text)
+            elif mode == "custom":
+                # Chart payloads pushed by render_chart via get_stream_writer. render_chart
+                # runs DURING tool execution — i.e. before the assistant streams its answer
+                # tokens — so emitting the <CHART> here would strand the chart above (or
+                # mid-) an empty answer. Buffer it instead and flush after </RESPONSE>.
+                if isinstance(chunk, dict) and "chart" in chunk:
+                    figure_json = chunk["chart"].get("figure_json", "")
+                    if figure_json:
+                        figure_jsons.append(figure_json)
+            elif mode == "values":
+                messages = chunk.get("messages") or []
+                last = messages[-1] if messages else None
+                # Emit ACTION/PLAN once per assistant message that has tool calls.
+                if isinstance(last, AIMessage) and last.tool_calls and last.id not in streamed_action_ids:
+                    streamed_action_ids.add(last.id)
+                    plan_steps = _latest_plan_steps(last)
+                    if plan_steps is not None:
+                        latest_plan_steps = plan_steps
+                    turn_actions.extend(_extract_actions(last))  # accumulate chips in order
+                    yield {"thread_id": thread_id, "ai_response": _format_action(last)}
+                # Emit suggestions when present.
+                sq = chunk.get("suggested_questions")
+                if sq and "suggestions" not in streamed_action_ids:
+                    streamed_action_ids.add("suggestions")
+                    if response_open:
+                        yield {"thread_id": thread_id, "ai_response": "\n</RESPONSE>\n\n"}
+                        response_open = False
+                    yield {"thread_id": thread_id, "ai_response": f"<SUGGESTION>\n{sq}\n</SUGGESTION>\n\n"}
 
-    # Flush buffered charts AFTER the answer text, so every client sees the chart
-    # described by prose that already arrived above it — never stranded over an
-    # empty answer mid-stream (render_chart emits during tool execution).
-    for figure_json in figure_jsons:
-        yield {"thread_id": thread_id, "ai_response": _format_chart(figure_json)}
+        if response_open:
+            yield {"thread_id": thread_id, "ai_response": "\n</RESPONSE>\n\n"}
 
-    # Deterministic terminal state: if this turn had a plan, re-emit it with every
-    # non-deleted step completed. Guarantees the plan never freezes mid-progress
-    # even when the model skips a final update_plan. The frontend replaces the
-    # plan on this last <PLAN>, so it lands after the answer text.
-    if latest_plan_steps:
-        final_steps = _all_completed(latest_plan_steps)
-        yield {"thread_id": thread_id, "ai_response": f"<PLAN>\n{final_steps}\n</PLAN>\n\n"}
+        # Flush buffered charts AFTER the answer text, so every client sees the chart
+        # described by prose that already arrived above it — never stranded over an
+        # empty answer mid-stream (render_chart emits during tool execution).
+        for figure_json in figure_jsons:
+            yield {"thread_id": thread_id, "ai_response": _format_chart(figure_json)}
 
-    await _persist_message(
-        thread_id, "assistant", "".join(response_parts), user_id, figures=figure_jsons
-    )
+        # Deterministic terminal state: if this turn had a plan, re-emit it with every
+        # non-deleted step completed. Guarantees the plan never freezes mid-progress
+        # even when the model skips a final update_plan. The frontend replaces the
+        # plan on this last <PLAN>, so it lands after the answer text.
+        if latest_plan_steps:
+            yield {"thread_id": thread_id,
+                   "ai_response": f"<PLAN>\n{_all_completed(latest_plan_steps)}\n</PLAN>\n\n"}
+
+        await _persist_assistant_turn()  # normal completion
+    finally:
+        # Client disconnected mid-stream → the loop was cancelled before the
+        # normal persist above ran. Shield the save so it finishes even while the
+        # finally unwinds a CancelledError, keeping the (possibly partial) turn in
+        # the transcript. _persist_message never raises; guard anyway so cleanup
+        # can't mask the original exception. CancelledError is a BaseException in
+        # 3.12, so it still propagates — only ordinary errors are logged.
+        if not persisted:
+            try:
+                await asyncio.shield(_persist_assistant_turn())
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("persist-on-cancel failed: %s", exc)

@@ -97,17 +97,30 @@ export function parsePyLiteral(src: string): unknown {
   }
 }
 
+// Coerce one raw step object into a valid PlanStep: unknown status → 'pending',
+// missing content → '', missing remarks → null. Shared by both the live
+// <PLAN>-stream parser (parsePlan) and the restore path (normalizePlan) so the
+// two can't drift.
+export function normalizePlanStep(x: Record<string, unknown>): PlanStep {
+  const status = x.status as PlanStatus;
+  return {
+    content: String(x.content ?? ''),
+    status: STATUSES.includes(status) ? status : 'pending',
+    remarks: (x.remarks ?? null) as string | null,
+  };
+}
+
 export function parsePlan(raw: string): PlanStep[] {
   const value = parsePyLiteral((raw || '').trim());
-  if (!Array.isArray(value)) return [];
-  return value
+  return normalizePlan(value);
+}
+
+// Restore a persisted plan (already-parsed JSON array of step objects) into
+// PlanStep[]. Missing / non-array → []; malformed entries are filtered. Never
+// throws on malformed stored data.
+export function normalizePlan(raw: unknown): PlanStep[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
     .filter((x): x is Record<string, unknown> => !!x && typeof x === 'object')
-    .map((x) => {
-      const status = x.status as PlanStatus;
-      return {
-        content: String(x.content ?? ''),
-        status: STATUSES.includes(status) ? status : 'pending',
-        remarks: (x.remarks ?? null) as string | null,
-      };
-    });
+    .map(normalizePlanStep);
 }
